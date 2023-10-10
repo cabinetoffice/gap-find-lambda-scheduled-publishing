@@ -60,9 +60,9 @@ describe("Lambda handler", () => {
       ])
     );
 
-    expect(mockedAxios.post).toHaveBeenNthCalledWith(
+    expect(mockedAxios.delete).toHaveBeenNthCalledWith(
     1,
-      "http://localhost:8080/application-forms/lambda/testGrantAdvertId",
+      "http://localhost:8080/application-forms/lambda/testGrantAdvertId/application",
       {},
       {
         headers: { Authorization: "testSecret" },

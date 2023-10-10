@@ -38,9 +38,8 @@ export const handler: SQSHandler = async (event) => {
 };
 
 const removeApplications = async (grantAdvertId: string) =>
-  axios.post(
-    `${process.env.BACKEND_URL}/application-forms/lambda/${grantAdvertId}`,
-    {},
+  axios.delete(
+    `${process.env.BACKEND_URL}/application-forms/lambda/${grantAdvertId}/application`,
     {
       headers: {
         Authorization: process.env.ADMIN_API_SECRET,
