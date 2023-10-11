@@ -17,6 +17,7 @@ export const handler: SQSHandler = async (event) => {
   if (action === "PUBLISH") {
     await publishGrantAdvert(grantAdvertId);
   } else if (action === "UNPUBLISH") {
+    await removeApplications(grantAdvertId);
     await unpublishGrantAdvert(grantAdvertId);
   } else {
     throw new Error(
@@ -35,6 +36,16 @@ export const handler: SQSHandler = async (event) => {
     await delay(timeToWait);
   }
 };
+
+const removeApplications = async (grantAdvertId: string) =>
+  axios.delete(
+    `${process.env.BACKEND_URL}/application-forms/lambda/${grantAdvertId}/application`,
+    {
+      headers: {
+        Authorization: process.env.ADMIN_API_SECRET,
+      },
+    }
+  );
 
 const publishGrantAdvert = async (grantAdvertId: string) => {
   await axios.post(
