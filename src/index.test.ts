@@ -6,7 +6,14 @@ import { getProps, type Optional } from './types';
 import { encrypt, getMilliSecondsBetween } from './utils';
 
 jest.mock('axios');
-jest.mock('./utils');
+jest.mock('./utils', () => {
+  //We want to mock only the encrypt function. as per original design, the rest of the functions should be the real ones
+  const allTheExportedFunctions = jest.requireActual('./utils');
+  return {
+    ...allTheExportedFunctions,
+    encrypt: jest.fn(),
+  };
+});
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
@@ -102,7 +109,7 @@ describe('Lambda handler', () => {
 
     const after = new Date();
     const difference = getMilliSecondsBetween(before, after);
-    console.log('difference', difference);
+
     expect(difference).toBeGreaterThanOrEqual(99);
   });
 
