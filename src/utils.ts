@@ -16,7 +16,8 @@ export const calculateTimeToWait = (minTime: number, before: Date, after: Date) 
 
 export const encrypt = (data: string, publicKey: string): string => {
   const key = new NodeRSA();
-  key.importKey(publicKey, 'pkcs8-public-pem');
+  const publicKeyWithBeginAndEnd = `-----BEGIN PUBLIC KEY-----${publicKey}-----END PUBLIC KEY-----`;
+  key.importKey(publicKeyWithBeginAndEnd, 'pkcs8-public-pem');
 
   return key.encrypt(data, 'base64');
 };
