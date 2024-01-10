@@ -1,24 +1,28 @@
-import { describe, expect } from "@jest/globals";
-import {
-  type Callback,
-  type Context,
-  type SQSBatchResponse,
-  type SQSEvent,
-} from "aws-lambda";
-import axios from "axios";
-import { handler } from ".";
-import { getProps, type Optional } from "./types";
-import { getMilliSecondsBetween } from "./utils";
+import { describe, expect } from '@jest/globals';
+import { type Callback, type Context, type SQSBatchResponse, type SQSEvent } from 'aws-lambda';
+import axios from 'axios';
+import { handler } from '.';
+import { getProps, type Optional } from './types';
+import { encrypt, getMilliSecondsBetween } from './utils';
 
-jest.mock("axios");
+jest.mock('axios');
+jest.mock('./utils', () => {
+  //We want to mock only the encrypt function. as per original design, the rest of the functions should be the real ones
+  const allTheExportedFunctions = jest.requireActual('./utils');
+  return {
+    ...allTheExportedFunctions,
+    encrypt: jest.fn(),
+  };
+});
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
-describe("Lambda handler", () => {
+describe('Lambda handler', () => {
   beforeEach(() => {
-    process.env.ADMIN_API_SECRET = "testSecret";
-    process.env.BACKEND_URL = "http://localhost:8080";
-    process.env.MIN_TIME_TO_WAIT_MILLISECONDS = "100";
+    process.env.ADMIN_API_SECRET = 'testSecret';
+    process.env.BACKEND_URL = 'http://localhost:8080';
+    process.env.MIN_TIME_TO_WAIT_MILLISECONDS = '100';
+    process.env.ADMIN_API_PUBLIC_KEY = 'testPublicKey';
   });
 
   const getDefaultHandlerProps = (): Parameters<typeof handler> => [
@@ -26,8 +30,8 @@ describe("Lambda handler", () => {
       Records: [
         {
           messageAttributes: {
-            grantAdvertId: { stringValue: "testGrantAdvertId" },
-            action: { stringValue: "PUBLISH" },
+            grantAdvertId: { stringValue: 'testGrantAdvertId' },
+            action: { stringValue: 'PUBLISH' },
           },
         },
       ],
@@ -36,49 +40,51 @@ describe("Lambda handler", () => {
     null as unknown as Callback<void | SQSBatchResponse>,
   ];
 
-  it("Should send a publish request to the backend when the action is PUBLISH", async () => {
+  it('Should send a publish request to the backend when the action is PUBLISH', async () => {
+    (encrypt as jest.Mock).mockReturnValueOnce('testEncryptedToken');
+
     await handler(...getProps(getDefaultHandlerProps));
 
     expect(mockedAxios.post).toHaveBeenNthCalledWith(
       1,
-      "http://localhost:8080/grant-advert/lambda/testGrantAdvertId/publish",
+      'http://localhost:8080/grant-advert/lambda/testGrantAdvertId/publish',
       {},
       {
-        headers: { Authorization: "testSecret" },
+        headers: { Authorization: 'testEncryptedToken' },
       }
     );
   });
 
-  it("Should send an unpublish request to the backend when the action is UNPUBLISH", async () => {
+  it('Should send an unpublish request to the backend when the action is UNPUBLISH', async () => {
+    (encrypt as jest.Mock).mockReturnValueOnce('testEncryptedToken');
+
     await handler(
       ...getProps(getDefaultHandlerProps, [
         {
-          Records: [
-            { messageAttributes: { action: { stringValue: "UNPUBLISH" } } },
-          ],
+          Records: [{ messageAttributes: { action: { stringValue: 'UNPUBLISH' } } }],
         },
       ])
     );
 
     expect(mockedAxios.delete).toHaveBeenNthCalledWith(
-    1,
-      "http://localhost:8080/application-forms/lambda/testGrantAdvertId/application",
+      1,
+      'http://localhost:8080/application-forms/lambda/testGrantAdvertId/application',
       {
-        headers: { Authorization: "testSecret" },
+        headers: { Authorization: 'testEncryptedToken' },
       }
     );
 
     expect(mockedAxios.post).toHaveBeenNthCalledWith(
       1,
-      "http://localhost:8080/grant-advert/lambda/testGrantAdvertId/unpublish",
+      'http://localhost:8080/grant-advert/lambda/testGrantAdvertId/unpublish',
       {},
       {
-        headers: { Authorization: "testSecret" },
+        headers: { Authorization: 'testEncryptedToken' },
       }
     );
   });
 
-  it("Should throw an error when the action is unrecognised", async () => {
+  it('Should throw an error when the action is unrecognised', async () => {
     await expect(
       handler(
         ...getProps(getDefaultHandlerProps, [
@@ -86,37 +92,34 @@ describe("Lambda handler", () => {
             Records: [
               {
                 messageAttributes: {
-                  action: { stringValue: "Unrecognised value" },
+                  action: { stringValue: 'Unrecognised value' },
                 },
               },
             ],
           },
         ])
       )
-    ).rejects.toThrowError(
-      'Failed to process advert: "Unrecognised value" is not a recognised action'
-    );
+    ).rejects.toThrowError('Failed to process advert: "Unrecognised value" is not a recognised action');
   });
 
-  it("Should take at least 100ms", async () => {
+  it('Should take at least 100ms', async () => {
     const before = new Date();
 
     await handler(...getProps(getDefaultHandlerProps));
 
     const after = new Date();
     const difference = getMilliSecondsBetween(before, after);
+
     expect(difference).toBeGreaterThanOrEqual(99);
   });
 
-  it("Should throw an error when the backend request fails", async () => {
-    mockedAxios.post.mockRejectedValueOnce(new Error("Error"));
+  it('Should throw an error when the backend request fails', async () => {
+    mockedAxios.post.mockRejectedValueOnce(new Error('Error'));
 
-    await expect(
-      handler(...getProps(getDefaultHandlerProps))
-    ).rejects.toThrowError("Error");
+    await expect(handler(...getProps(getDefaultHandlerProps))).rejects.toThrowError('Error');
   });
 
-  it("Should throw an error when the grantAdvertId is not provided", async () => {
+  it('Should throw an error when the grantAdvertId is not provided', async () => {
     await expect(
       handler(
         ...getProps(getDefaultHandlerProps, [
@@ -132,10 +135,10 @@ describe("Lambda handler", () => {
           },
         ])
       )
-    ).rejects.toThrowError("Failed to process advert: No grantAdvertId found");
+    ).rejects.toThrowError('Failed to process advert: No grantAdvertId found');
   });
 
-  it("Should throw an error when the action is not provided", async () => {
+  it('Should throw an error when the action is not provided', async () => {
     await expect(
       handler(
         ...getProps(getDefaultHandlerProps, [
@@ -151,6 +154,6 @@ describe("Lambda handler", () => {
           },
         ])
       )
-    ).rejects.toThrowError("Failed to process advert: No action found");
+    ).rejects.toThrowError('Failed to process advert: No action found');
   });
 });

@@ -1,8 +1,8 @@
-import { type SQSHandler } from "aws-lambda";
-import axios from "axios";
-import { calculateTimeToWait, delay } from "./utils";
+import { type SQSHandler } from 'aws-lambda';
+import axios from 'axios';
+import { calculateTimeToWait, delay, encrypt } from './utils';
 
-const genericErrorMessage = "Failed to process advert: ";
+const genericErrorMessage = 'Failed to process advert: ';
 
 export const handler: SQSHandler = async (event) => {
   const timeBeforePost = new Date();
@@ -10,19 +10,17 @@ export const handler: SQSHandler = async (event) => {
   const grantAdvertId = messageAttributes.grantAdvertId.stringValue;
   const action = messageAttributes.action.stringValue;
 
-  if (!grantAdvertId)
-    throw new Error(genericErrorMessage + "No grantAdvertId found");
-  if (!action) throw new Error(genericErrorMessage + "No action found");
+  if (!grantAdvertId) throw new Error(genericErrorMessage + 'No grantAdvertId found');
+  if (!action) throw new Error(genericErrorMessage + 'No action found');
+  const encryptedToken = encrypt(process.env.ADMIN_API_SECRET, process.env.ADMIN_API_PUBLIC_KEY);
 
-  if (action === "PUBLISH") {
-    await publishGrantAdvert(grantAdvertId);
-  } else if (action === "UNPUBLISH") {
-    await removeApplications(grantAdvertId);
-    await unpublishGrantAdvert(grantAdvertId);
+  if (action === 'PUBLISH') {
+    await publishGrantAdvert(grantAdvertId, encryptedToken);
+  } else if (action === 'UNPUBLISH') {
+    await removeApplications(grantAdvertId, encryptedToken);
+    await unpublishGrantAdvert(grantAdvertId, encryptedToken);
   } else {
-    throw new Error(
-      genericErrorMessage + '"' + action + '" is not a recognised action'
-    );
+    throw new Error(genericErrorMessage + '"' + action + '" is not a recognised action');
   }
 
   const timeAfterPost = new Date();
@@ -37,35 +35,32 @@ export const handler: SQSHandler = async (event) => {
   }
 };
 
-const removeApplications = async (grantAdvertId: string) =>
-  axios.delete(
-    `${process.env.BACKEND_URL}/application-forms/lambda/${grantAdvertId}/application`,
-    {
-      headers: {
-        Authorization: process.env.ADMIN_API_SECRET,
-      },
-    }
-  );
+const removeApplications = async (grantAdvertId: string, encryptedToken: string) =>
+  axios.delete(`${process.env.BACKEND_URL}/application-forms/lambda/${grantAdvertId}/application`, {
+    headers: {
+      Authorization: encryptedToken,
+    },
+  });
 
-const publishGrantAdvert = async (grantAdvertId: string) => {
+const publishGrantAdvert = async (grantAdvertId: string, encryptedToken: string) => {
   await axios.post(
     `${process.env.BACKEND_URL}/grant-advert/lambda/${grantAdvertId}/publish`,
     {},
     {
       headers: {
-        Authorization: process.env.ADMIN_API_SECRET,
+        Authorization: encryptedToken,
       },
     }
   );
 };
 
-const unpublishGrantAdvert = async (grantAdvertId: string) => {
+const unpublishGrantAdvert = async (grantAdvertId: string, encryptedToken: string) => {
   await axios.post(
     `${process.env.BACKEND_URL}/grant-advert/lambda/${grantAdvertId}/unpublish`,
     {},
     {
       headers: {
-        Authorization: process.env.ADMIN_API_SECRET,
+        Authorization: encryptedToken,
       },
     }
   );
