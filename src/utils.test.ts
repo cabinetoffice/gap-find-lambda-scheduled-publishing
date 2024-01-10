@@ -81,9 +81,11 @@ describe('utils', () => {
 
   describe('encrypt function', () => {
     it('should encrypt data using the provided public key', () => {
-      const mockPublicKey = `MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA7e7oyeyA5S6v9SgFIoDi6kuzsFuk4U2DZUVjjRjwjX7OS/Wdxhb66HODm0J4lgvj2jb3wxjkgLyRlxdnKLUeDkOpZ37HgUzbdNc83aQwt6ZpBB/xskc+L5d/JAQTmI3eWRld+edkGROeTk9t9AMOI8Xan9dI7XpA5D+eZAxLCX2s0eOqRLD1YB4D+lcj+R0aFj8aFFxf6bLOVpNt9/Sy4I74sDkxDh19WmZwM1tQADK93yXHTeDKE0jqKmbT6Do0A7m+/68UDsbImQuZ0wZBNnl2Bb5qOWeWvOLoFJwMio+Go1ScyZwrtQyl2A9pw+fUGd5BuK2UGkxGOUgH+H0WxwIDAQAB`;
+      const mockPublicKey =
+        'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwA9Z7o0z3DYfB+NiqnXCzCoPwDMARvL6gmbELeW9pmVIT1ZJY4u7PL9CGP2HTpKVVHlULRFEYWt1KZnMt0p+7zjmVwxYSVkrZNLOV0hWO6ej9EfLyIKduiNL1lmSN94yTgt0NbU8nIaUzkOWxf321ER/Ru/QMlmX+nLJfF0z1s4oarfY7mIdgPSrPcwgaHsyvuiYjZFKoph23CAu3335ZudZ//HEiWxo2+nRjltCelBLHCVpsCk+Rbfp38RNEfDvjFC4wzzosH65cQ2KyFKdyOOiqUO447zmHNh15CD/+g0kxgjyZSIWMkPFrEf+x66ruTRisYOObKdUezLpos+jXQIDAQAB';
 
       const testData = 'Hello, World!';
+
       const encryptedData = encrypt(testData, mockPublicKey);
 
       expect(encryptedData).toBeDefined();

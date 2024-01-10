@@ -1,4 +1,4 @@
-import NodeRSA from 'node-rsa';
+import * as crypto from 'crypto';
 export const delay = (milliseconds: number) => {
   return new Promise((resolve) => {
     setTimeout(resolve, milliseconds);
@@ -14,10 +14,18 @@ export const calculateTimeToWait = (minTime: number, before: Date, after: Date) 
   return minTime + differenceInMilliseconds;
 };
 
-export const encrypt = (data: string, publicKey: string): string => {
-  const key = new NodeRSA();
-  const publicKeyWithBeginAndEnd = `-----BEGIN PUBLIC KEY-----${publicKey}-----END PUBLIC KEY-----`;
-  key.importKey(publicKeyWithBeginAndEnd, 'pkcs8-public-pem', { encryptionScheme: 'pkcs1', signingScheme: 'pkcs1' });
+export const encrypt = (secret: string, publicKey: string): string => {
+  const publicKeyWithBeginAndEnd = `-----BEGIN PUBLIC KEY-----\n${publicKey}\n-----END PUBLIC KEY-----`;
 
-  return key.encrypt(data, 'base64');
+  const publicKeyBuffer = Buffer.from(publicKeyWithBeginAndEnd, 'utf-8');
+
+  const encryptedBuffer = crypto.publicEncrypt(
+    {
+      key: publicKeyBuffer,
+      padding: crypto.constants.RSA_PKCS1_PADDING,
+    },
+    Buffer.from(secret, 'utf-8')
+  );
+
+  return encryptedBuffer.toString('base64');
 };
